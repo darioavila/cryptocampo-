@@ -1,177 +1,36 @@
-# CryptoCampo — Proyecto Final (CCNFT + BUSD)
-
-Plataforma que **tokeniza bienes agrícolas mediante NFTs**. Cada NFT (`CCNFT`) representa una unidad de valor de un bien agrícola y se compra/vende/reclama usando un token ERC20 (`BUSD`) como medio de pago.
-
-- **`BUSD`** — Token ERC20 (fungible). Moneda de pago. Se mintean 10.000.000 al desplegar.
-- **`CCNFT`** — Colección ERC721Enumerable. Permite `buy`, `trade`, `putOnSale` y `claim`.
-
 ---
 
-## 1. Requisitos previos
+## 📦 Entrega del Proyecto Final
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) (`forge`, `cast`, `anvil`)
-- MetaMask con la red **Sepolia** agregada
-- **ETH de Sepolia** (usá un faucet, ej. https://sepoliafaucet.com)
-- API key de **Etherscan** (https://etherscan.io/myapikey)
-- Un RPC de Sepolia (Infura / Alchemy)
+### Contratos desplegados en Sepolia
 
-Instalar Foundry:
-
-```shell
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-```
-
----
-
-## 2. Inicializar el proyecto e instalar dependencias
-
-Si partís de cero:
-
-```shell
-forge init cryptocampo
-cd cryptocampo
-```
-
-Instalar OpenZeppelin **v4.5.0** y forge-std:
-
-```shell
-forge install OpenZeppelin/openzeppelin-contracts@v4.5.0 --no-commit
-forge install foundry-rs/forge-std --no-commit
-```
-
-(o simplemente `make install`)
-
----
-
-## 3. Compilar
-
-```shell
-forge build      # o: make build
-```
-
----
-
-## 4. Testear
-
-```shell
-forge test -vvv  # o: make test
-```
-
-Los tests cubren todos los setters, los guards de `trade`, y los flujos completos de `buy`, `claim` y `trade`.
-
----
-
-## 5. Configurar variables de entorno
-
-Copiá `.env.example` a `.env` y completá tus datos:
-
-```shell
-cp .env.example .env
-```
-
-```dotenv
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_API_KEY
-PRIVATE_KEY=0xTU_CLAVE_PRIVADA        # NUNCA la subas a GitHub
-ETHERSCAN_API_KEY=TU_API_KEY_ETHERSCAN
-```
-
-> ⚠️ `.env` está en `.gitignore`. No lo subas nunca al repositorio.
-
----
-
-## 6. Desplegar y verificar en Sepolia
-
-```shell
-make deploy-busd     # despliega y verifica BUSD
-make deploy-ccnft    # despliega y verifica CCNFT
-```
-
-Anotá las **direcciones** que imprime cada script. Las vas a necesitar abajo.
-
----
-
-## 7. Importar el token BUSD a MetaMask
-
-MetaMask → *Importar tokens* → pegá la **dirección del contrato BUSD** desplegado. Vas a ver tu balance de 10.000.000 BUSD (el `_mint` va a la cuenta que desplegó).
-
----
-
-## 8. Aprobar (`approve`) el contrato CCNFT
-
-Antes de comprar, el contrato CCNFT tiene que tener permiso para mover tus BUSD.
-
-Desde Etherscan (pestaña *Write Contract* del **BUSD**) o desde Remix, ejecutá `approve`:
-
-- `spender`: **dirección del contrato CCNFT**
-- `value`: `10000000000000000000000000` (los 10M con 18 decimales)
-
----
-
-## 9. Setear las funciones que condicionan a `buy`
-
-En Etherscan, pestaña *Write Contract* del **CCNFT** (conectá tu wallet, tenés que ser el owner). El orden no importa entre ellas, pero **todas** deben estar seteadas antes del `buy`:
-
-| Función | Valor de ejemplo | Para qué |
+| Contrato | Dirección | Enlace Etherscan |
 |---|---|---|
-| `setFundsCollector` | tu dirección | recibe el pago de las ventas |
-| `setFeesCollector` | tu dirección | recibe las comisiones |
-| `setFundsToken` | dirección del **BUSD** | define el ERC20 de pago |
-| `setCanBuy` | `true` | habilita la compra |
-| `setMaxBatchCount` | `10` | máx. NFTs por operación |
-| `setBuyFee` | `100` | comisión 1% (base 10000) |
-| `setMaxValueToRaise` | `100000000000000000000000` | tope a recaudar (100.000) |
-| `addValidValues` | `1000000000000000000` | permite NFTs de valor 1 BUSD |
+| **BUSD** (ERC-20) | `0x5e784EBc766A0c0c97614C20F120256F98F5430e` | [Ver en Sepolia Etherscan](https://sepolia.etherscan.io/address/0x5e784EBc766A0c0c97614C20F120256F98F5430e) |
+| **CCNFT** (ERC-721) | `0x9aAF630A81c0A1f6CcD4bF59FF4F15aF400647F3` | [Ver en Sepolia Etherscan](https://sepolia.etherscan.io/address/0x9aAF630A81c0A1f6CcD4bF59FF4F15aF400647F3) |
 
-> Los valores van en **wei** (18 decimales). `1 BUSD = 1000000000000000000`.
+Ambos contratos están **verificados** en Sepolia Etherscan.
 
----
+### Interacciones realizadas
 
-## 10. Ejecutar `buy`
+En el contrato **CCNFT**, se pueden verificar las siguientes transacciones (pestaña "Transactions"):
 
-En *Write Contract* del **CCNFT**:
+1. Setters ejecutados por el owner:
+   - `setFundsCollector`
+   - `setFeesCollector`
+   - `setFundsToken` (apuntando al contrato BUSD)
+   - `setCanBuy(true)`
+   - `setMaxBatchCount(10)`
+   - `setBuyFee(100)` — 1%
+   - `setMaxValueToRaise(100000 * 10^18)`
+   - `addValidValues(1 * 10^18)`
+2. `approve` en el contrato BUSD para autorizar al CCNFT.
+3. `buy(1 * 10^18, 1)` — compra del primer NFT (tokenId 0), con mint del NFT + transferencia del pago (1 BUSD) + comisión (0.01 BUSD).
 
-- `value`: `1000000000000000000` (debe estar en `validValues`)
-- `amount`: `1` (entre 1 y `maxBatchCount`)
+### Capturas de pantalla
 
-Si todo está bien, la transacción mintea el/los NFT(s), transfiere el pago al `fundsCollector` y la comisión al `feesCollector`.
+Las capturas de MetaMask (BUSD importado y NFT CCNFT importado) se adjuntan en la entrega junto con este repositorio.
 
-Verás tu NFT `CCNFT` importándolo en MetaMask (*Importar NFT* → dirección del CCNFT + tokenId `0`).
+### Autor
 
----
-
-## Otras funciones
-
-- **`putOnSale(tokenId, price)`** — pone tu NFT en venta (requiere `canTrade = true`).
-- **`trade(tokenId)`** — otro usuario compra un NFT en venta; paga el precio al vendedor y la comisión (`tradeFee`) al `feesCollector`.
-- **`claim(uint256[] tokenIds)`** — quema tus NFTs y recibís su valor + `profitToPay` en BUSD (el `fundsCollector` debe tener BUSD y haber aprobado al CCNFT).
-
-> Las transferencias directas (`transferFrom` / `safeTransferFrom`) están **deshabilitadas** a propósito: la única forma de mover un NFT es vía `trade`.
-
----
-
-## Qué entregar
-
-1. 🔗 Enlace de **Sepolia Etherscan** de la dirección del **CCNFT** desplegado, con **todas las interacciones** (setters, approve y el `buy`).
-2. 📸 Captura del **NFT CCNFT** y de los **tokens BUSD** importados en MetaMask.
-3. 🔗 Enlace de **GitHub** con el proyecto completo.
-
----
-
-## Estructura del proyecto
-
-```
-cryptocampo/
-├── src/
-│   ├── BUSD.sol          # Token ERC20 de pago
-│   └── CCNFT.sol         # Colección NFT (buy / trade / claim / putOnSale)
-├── test/
-│   └── CCNFT.t.sol       # Tests (setters, guards y flujos completos)
-├── script/
-│   ├── BUSD.s.sol        # Despliegue de BUSD
-│   └── CCNFT.s.sol       # Despliegue de CCNFT
-├── foundry.toml
-├── remappings.txt
-├── Makefile
-└── .env.example
-```
+Dario Avila
